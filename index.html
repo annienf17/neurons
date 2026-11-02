@@ -4,11 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#05060e" />
-    <meta name="description" content="EgoExplained — interaktywna podróż 3D przez neuronową sieć świadomości. Scroll, WebGL i świetlne smugi kursora." />
+    <meta
+      name="description"
+      content="EgoExplained — interaktywna podróż 3D przez neuronową sieć świadomości. Scroll, WebGL i świetlne smugi kursora."
+    />
     <title>EgoExplained — Neural Journey · WebGL Experience</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./styles.css" />
     <script type="importmap">
       {
@@ -23,7 +29,9 @@
   <body>
     <div id="loading" class="loading" aria-live="polite">
       <div class="loading__inner">
-        <div class="loading__glyph" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="loading__glyph" aria-hidden="true">
+          <i></i><i></i><i></i>
+        </div>
         <span class="loading__eyebrow">EGOEXPLAINED / NEURAL EXPERIENCE</span>
         <div class="loading__bar"><span></span></div>
         <p id="loading-text">Otwieramy połączenia neuronowe…</p>
@@ -33,59 +41,121 @@
     <main>
       <div id="journey" class="journey">
         <div id="stage" class="stage">
-          <canvas id="webgl" aria-label="Trójwymiarowa animacja podróży przez świecącą sieć neuronów"></canvas>
+          <canvas
+            id="webgl"
+            aria-label="Trójwymiarowa animacja podróży przez świecącą sieć neuronów"
+          ></canvas>
           <canvas id="ink" aria-hidden="true"></canvas>
           <div class="stage__grain" aria-hidden="true"></div>
           <div class="stage__vignette" aria-hidden="true"></div>
           <div class="stage__light stage__light--top" aria-hidden="true"></div>
 
           <header class="topbar">
-            <a class="brand" href="#journey" aria-label="EgoExplained — początek podróży">
-              <span class="brand__symbol" aria-hidden="true"><span>e</span><span>e</span></span>
-              <span class="brand__name">EGO<span>EXPLAINED</span><small>THE INNER JOURNEY</small></span>
+            <a
+              class="brand"
+              href="#journey"
+              aria-label="EgoExplained — początek podróży"
+            >
+              <span class="brand__symbol" aria-hidden="true"
+                ><span>e</span><span>e</span></span
+              >
+              <span class="brand__name"
+                >EGO<span>EXPLAINED</span><small>THE INNER JOURNEY</small></span
+              >
             </a>
             <div class="topbar__right">
               <span class="topbar__chapter">INTERACTIVE WEBGL / 001</span>
-              <button id="motion-toggle" class="motion-toggle" type="button" aria-pressed="false" title="Włącz lub wyłącz animacje dodatkowe">
+              <button
+                id="motion-toggle"
+                class="motion-toggle"
+                type="button"
+                aria-pressed="false"
+                title="Włącz lub wyłącz animacje dodatkowe"
+              >
                 <span class="motion-toggle__dot" aria-hidden="true"></span>
                 <span id="motion-label">MOTION ON</span>
               </button>
             </div>
           </header>
 
-          <div class="chapter chapter--first is-active" data-chapter="0" aria-hidden="false">
-            <p class="eyebrow"><span class="eyebrow__line"></span>01 / PRZEKROCZ GRANICĘ</p>
-            <h1>WEJDŹ<br />DO <em>UMYSŁU.</em></h1>
-            <p class="chapter__copy">Nie wszystko, co czujesz, jest tym, czym się wydaje.<br />Zobacz świat połączeń, reakcji i percepcji.</p>
-            <span class="chapter__tag">BREAK THE ILLUSION / BEGIN THE JOURNEY</span>
+          <div
+            class="chapter chapter--first is-active"
+            data-chapter="0"
+            aria-hidden="false"
+          >
+            <p class="eyebrow">
+              <span class="eyebrow__line"></span>01 / PRZEKROCZ GRANICĘ
+            </p>
+
+            <p class="chapter__copy">
+              Nie wszystko, co czujesz, jest tym, czym się wydaje.<br />Zobacz
+              świat połączeń, reakcji i percepcji.
+            </p>
+            <span class="chapter__tag"
+              >BREAK THE ILLUSION / BEGIN THE JOURNEY</span
+            >
           </div>
 
-          <div class="chapter chapter--right" data-chapter="1" aria-hidden="true">
-            <p class="eyebrow"><span class="eyebrow__line"></span>02 / NEURAL PATHWAYS</p>
-            <h2>WSZYSTKO<br />JEST <em>POŁĄCZONE.</em></h2>
-            <p class="chapter__copy">Impuls. Sygnał. Reakcja.<br />Miliardy niewidocznych dróg kształtują Twoje doświadczenie.</p>
+          <div
+            class="chapter chapter--right"
+            data-chapter="1"
+            aria-hidden="true"
+          >
+            <p class="eyebrow">
+              <span class="eyebrow__line"></span>02 / NEURAL PATHWAYS
+            </p>
+
+            <p class="chapter__copy">
+              Impuls. Sygnał. Reakcja.<br />Miliardy niewidocznych dróg
+              kształtują Twoje doświadczenie.
+            </p>
             <span class="chapter__tag">FOLLOW THE SIGNAL</span>
           </div>
 
           <div class="chapter" data-chapter="2" aria-hidden="true">
-            <p class="eyebrow"><span class="eyebrow__line"></span>03 / ZŁUDZENIE I PERCEPCJA</p>
-            <h2>UMYSŁ<br />TWORZY <em>HISTORIE.</em></h2>
-            <p class="chapter__copy">To, co znajome, nie zawsze jest bezpieczne.<br />Świadomość zaczyna się od zauważenia wzorca.</p>
+            <p class="eyebrow">
+              <span class="eyebrow__line"></span>03 / ZŁUDZENIE I PERCEPCJA
+            </p>
+
+            <p class="chapter__copy">
+              To, co znajome, nie zawsze jest bezpieczne.<br />Świadomość
+              zaczyna się od zauważenia wzorca.
+            </p>
             <span class="chapter__tag">QUESTION THE PATTERN</span>
           </div>
 
-          <div class="chapter chapter--right" data-chapter="3" aria-hidden="true">
-            <p class="eyebrow"><span class="eyebrow__line"></span>04 / MOMENT PRZEŁOMU</p>
-            <h2>ZOBACZ<br /><em>POZA ILUZJĄ.</em></h2>
-            <p class="chapter__copy">Gdy zaczynasz rozumieć mechanizm,<br />pojawia się przestrzeń na własny wybór.</p>
+          <div
+            class="chapter chapter--right"
+            data-chapter="3"
+            aria-hidden="true"
+          >
+            <p class="eyebrow">
+              <span class="eyebrow__line"></span>04 / MOMENT PRZEŁOMU
+            </p>
+
+            <p class="chapter__copy">
+              Gdy zaczynasz rozumieć mechanizm,<br />pojawia się przestrzeń na
+              własny wybór.
+            </p>
             <span class="chapter__tag">CLARITY CHANGES EVERYTHING</span>
           </div>
 
           <div class="chapter" data-chapter="4" aria-hidden="true">
-            <p class="eyebrow"><span class="eyebrow__line"></span>05 / POWRÓT DO SIEBIE</p>
-            <h2>ODZYSKAJ<br /><em>SWÓJ KIERUNEK.</em></h2>
-            <p class="chapter__copy">Nie musisz zmieniać przeszłości, by zacząć inaczej patrzeć na przyszłość.</p>
-            <a class="chapter__cta" href="https://www.egoexplained.com/" target="_blank" rel="noopener noreferrer">ODKRYJ EGOEXPLAINED <span aria-hidden="true">↗</span></a>
+            <p class="eyebrow">
+              <span class="eyebrow__line"></span>05 / POWRÓT DO SIEBIE
+            </p>
+
+            <p class="chapter__copy">
+              Nie musisz zmieniać przeszłości, by zacząć inaczej patrzeć na
+              przyszłość.
+            </p>
+            <a
+              class="chapter__cta"
+              href="https://www.egoexplained.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              >ODKRYJ EGOEXPLAINED <span aria-hidden="true">↗</span></a
+            >
           </div>
 
           <div class="coordinates" aria-hidden="true">
@@ -97,18 +167,67 @@
           <div class="side-index" aria-label="Etapy podróży">
             <span class="side-index__title">EXPLORE THE MIND</span>
             <div class="side-index__steps">
-              <button class="side-index__step is-current" type="button" data-jump="0" aria-label="Etap 1: Wejście" aria-current="step"><b>01</b><span>WEJŚCIE</span></button>
-              <button class="side-index__step" type="button" data-jump="1" aria-label="Etap 2: Połączenia"><b>02</b><span>POŁĄCZENIA</span></button>
-              <button class="side-index__step" type="button" data-jump="2" aria-label="Etap 3: Percepcja"><b>03</b><span>PERCEPCJA</span></button>
-              <button class="side-index__step" type="button" data-jump="3" aria-label="Etap 4: Przełom"><b>04</b><span>PRZEŁOM</span></button>
-              <button class="side-index__step" type="button" data-jump="4" aria-label="Etap 5: Kierunek"><b>05</b><span>KIERUNEK</span></button>
+              <button
+                class="side-index__step is-current"
+                type="button"
+                data-jump="0"
+                aria-label="Etap 1: Wejście"
+                aria-current="step"
+              >
+                <b>01</b><span>WEJŚCIE</span>
+              </button>
+              <button
+                class="side-index__step"
+                type="button"
+                data-jump="1"
+                aria-label="Etap 2: Połączenia"
+              >
+                <b>02</b><span>POŁĄCZENIA</span>
+              </button>
+              <button
+                class="side-index__step"
+                type="button"
+                data-jump="2"
+                aria-label="Etap 3: Percepcja"
+              >
+                <b>03</b><span>PERCEPCJA</span>
+              </button>
+              <button
+                class="side-index__step"
+                type="button"
+                data-jump="3"
+                aria-label="Etap 4: Przełom"
+              >
+                <b>04</b><span>PRZEŁOM</span>
+              </button>
+              <button
+                class="side-index__step"
+                type="button"
+                data-jump="4"
+                aria-label="Etap 5: Kierunek"
+              >
+                <b>05</b><span>KIERUNEK</span>
+              </button>
             </div>
           </div>
 
           <div class="bottom-bar">
-            <div class="bottom-bar__left"><span class="signal-dot"></span><span>LIVE NEURAL SIMULATION</span><span class="desktop-only"> · THREE.JS / WEBGL</span></div>
-            <div class="scroll-cue"><span class="scroll-cue__mouse" aria-hidden="true"><i></i></span><span>SCROLL TO TRAVEL<br /><small>PRZEWIJAJ, ABY WEJŚĆ GŁĘBIEJ</small></span></div>
-            <div class="bottom-bar__right"><span id="progress-label">00%</span><span class="progress-track"><i id="progress-fill"></i></span></div>
+            <div class="bottom-bar__left">
+              <span class="signal-dot"></span><span>LIVE NEURAL SIMULATION</span
+              ><span class="desktop-only"> · THREE.JS / WEBGL</span>
+            </div>
+            <div class="scroll-cue">
+              <span class="scroll-cue__mouse" aria-hidden="true"><i></i></span
+              ><span
+                >SCROLL TO TRAVEL<br /><small
+                  >PRZEWIJAJ, ABY WEJŚĆ GŁĘBIEJ</small
+                ></span
+              >
+            </div>
+            <div class="bottom-bar__right">
+              <span id="progress-label">00%</span
+              ><span class="progress-track"><i id="progress-fill"></i></span>
+            </div>
           </div>
           <div id="cursor-orb" class="cursor-orb" aria-hidden="true"></div>
         </div>
@@ -116,13 +235,32 @@
 
       <section id="about" class="afterword">
         <div class="afterword__halo" aria-hidden="true"></div>
-        <span class="afterword__eyebrow">EGOEXPLAINED / BEYOND THE ILLUSION</span>
+        <span class="afterword__eyebrow"
+          >EGOEXPLAINED / BEYOND THE ILLUSION</span
+        >
         <h2>POZNAJ MECHANIZM.<br /><em>ODZYSKAJ SIEBIE.</em></h2>
-        <p>To interaktywne demo eksploruje świat neuronów jako metaforę świadomości, połączeń i zmiany. Teraz możesz wrócić do początku albo odkryć EgoExplained.</p>
-        <div class="afterword__actions"><a href="#journey" class="afterword__back">↖ JESZCZE RAZ</a><a class="afterword__link" href="https://www.egoexplained.com/" target="_blank" rel="noopener noreferrer">PRZEJDŹ DO EGOEXPLAINED ↗</a></div>
+        <p>
+          To interaktywne demo eksploruje świat neuronów jako metaforę
+          świadomości, połączeń i zmiany. Teraz możesz wrócić do początku albo
+          odkryć EgoExplained.
+        </p>
+        <div class="afterword__actions">
+          <a href="#journey" class="afterword__back">↖ JESZCZE RAZ</a
+          ><a
+            class="afterword__link"
+            href="https://www.egoexplained.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            >PRZEJDŹ DO EGOEXPLAINED ↗</a
+          >
+        </div>
         <small>NEURAL JOURNEY — CONCEPT DEMO / ANNIE DIAMOND</small>
       </section>
     </main>
-    <noscript><div class="noscript">Aby wyświetlić doświadczenie 3D, włącz JavaScript w przeglądarce.</div></noscript>
+    <noscript
+      ><div class="noscript">
+        Aby wyświetlić doświadczenie 3D, włącz JavaScript w przeglądarce.
+      </div></noscript
+    >
   </body>
 </html>
