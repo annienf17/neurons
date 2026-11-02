@@ -49,7 +49,8 @@ const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)
 let reducedMotion = prefersReducedMotion.matches;
 let targetProgress = 0;
 let smoothProgress = 0;
-let chapterIndex = -1;
+let chapterIndex = -2;      // active tour stop (-1 = between stops)
+let navIndex = -1;          // last stop reached, highlighted in the side index
 let internalTime = 0;
 let pointerX = 0;
 let pointerY = 0;
@@ -91,9 +92,45 @@ let portalGroup;
 const networkFade = {value: 0};
 // The glowing network is quieter in the body finale so the organs stay readable.
 const networkDim = {value: 0};
-// Chapter boundaries as flight depth (units travelled); chapter 05 also holds the body finale.
-const CHAPTER_DEPTHS = [53.6, 107.2, 160.8, 214.4];
-const CHAPTER_JUMPS = [0, 59, 115, 174, 230];
+// Anatomical tour — single source of truth, in camera order. Each stop links the HTML
+// chapter (data-chapter / data-jump = id), the 3D object, its scene labels and its window
+// in flight depth (units travelled; camera z = 18 - depth). The text is shown and the
+// labels are allowed to appear only inside [start, end); the gaps between windows let the
+// previous text fade out before the next one appears. Windows were derived from where each
+// label/object is actually readable on the fixed camera path (desktop 16:9, 65° FOV).
+const TOUR = [
+  {id: 'grey-matter',        object: 'brainGroup (cerebrum, cerebellum, stem)', z: 0,    labels: [],                                         start: 0,   end: 1,   jump: 0},
+  {id: 'prefrontal-cortex',  object: 'brainGroup — frontal-lobe highlight (uPfc)', z: 0, labels: ['PREFRONTAL CORTEX'],                    start: 1.5, end: 4.5, jump: 3},
+  {id: 'white-matter',       object: 'whiteMatter tunnel',                      z: -22,  labels: ['WHITE MATTER'],                           start: 14,  end: 29,  jump: 20},
+  {id: 'corpus-callosum',    object: 'callosum',                                z: -56,  labels: ['CORPUS CALLOSUM'],                        start: 32,  end: 84,  jump: 40},
+  {id: 'hippocampus',        object: 'hippocampus + fornix',                    z: -112, labels: ['HIPOKAMP'],                               start: 87,  end: 118, jump: 98},
+  {id: 'thalamus',           object: 'thalamus ×2 + interthalamic adhesion',    z: -170, labels: ['THALAMUS'],                               start: 130, end: 171, jump: 145},
+  {id: 'caudate-nucleus',    object: 'caudate nucleus',                         z: -208, labels: ['CAUDATE NUCLEUS'],                        start: 182, end: 207, jump: 195},
+  {id: 'amygdala',           object: 'amygdala (end of the caudate tail)',      z: -220, labels: ['AMYGDALA'],                               start: 210, end: 227, jump: 216},
+  {id: 'brainstem',          object: 'brainstem → spinal cord',                 z: -252, labels: ['BRAINSTEM'],                              start: 230, end: 252, jump: 238},
+  {id: 'vagus-nerve',        object: 'vagus nerve trunks + branches',           z: -276, labels: ['VAGUS NERVE'],                            start: 255, end: 279, jump: 264},
+  {id: 'heart-lungs',        object: 'trachea, lungs, heart, diaphragm',        z: -313, labels: ['TRACHEA', 'LUNGS', 'HEART', 'DIAPHRAGM'], start: 282, end: 334, jump: 296},
+  {id: 'stomach-intestines', object: 'stomach, intestines',                     z: -363, labels: ['STOMACH', 'INTESTINES'],                  start: 337, end: 400, jump: 352},
+];
+const tourIndexAt = depth => TOUR.findIndex(stop => depth >= stop.start && depth < stop.end);
+// 0 → 1 → 0 across a stop's window, so its labels never show outside their chapter.
+const tourGate = (index, depth) => {
+  if (index < 0) return 0;
+  const {start, end} = TOUR[index], ramp = Math.min(2, (end - start) / 4);
+  return smooth01(start, start + ramp, depth) * (1 - smooth01(end - ramp, end, depth));
+};
+const PFC_STOP = TOUR.findIndex(stop => stop.id === 'prefrontal-cortex');
+// The brain exterior leaves the frame after ~5 units, so that opening stretch gets a larger
+// share of the scroll (same camera path; the rest of the journey keeps its pace).
+const INTRO = {depth: 5, share: .07};
+const scrollToProgress = r => {
+  const d = INTRO.depth / CONFIG.journeyDistance;
+  return r < INTRO.share ? r / INTRO.share * d : d + (r - INTRO.share) / (1 - INTRO.share) * (1 - d);
+};
+const progressToScroll = p => {
+  const d = INTRO.depth / CONFIG.journeyDistance;
+  return p < d ? p / d * INTRO.share : INTRO.share + (p - d) / (1 - d) * (1 - INTRO.share);
+};
 const fadeMaterials = [];   // plain materials whose opacity follows networkFade
 let introTime = 0;          // seconds since start, drives the brain's materialise intro
 let auroraMaterials = [];
@@ -568,6 +605,8 @@ function buildBrain() {
     uniforms: {
       uTime: {value: 0},
       uReveal: {value: 0},
+      uPfc: {value: 0},      // prefrontal highlight, driven by its tour stop
+      uPfcColor: {value: basePalette[4].clone().lerp(basePalette[2], .5)},
       uFade: {value: 1},     // fades the whole brain out once the camera is inside
       // Ivory brain tissue: warm ivory crests, soft cream and light taupe in the depths.
       uPale: {value: new THREE.Color('#fff8e7')},
@@ -602,6 +641,8 @@ function buildBrain() {
       uniform float uTime;
       uniform float uReveal;
       uniform float uFade;
+      uniform float uPfc;
+      uniform vec3 uPfcColor;
       uniform vec3 uPale;
       uniform vec3 uRose;
       uniform vec3 uMauve;
@@ -668,6 +709,10 @@ function buildBrain() {
                  + uPale * scan * crest * .025
                  + uPale * outline * .08
                  + uPale * edgeGlow * .3;
+        // Prefrontal cortex: frontal lobe in front of the precentral sulcus (dCentral ≈ .13),
+        // incl. the orbital surface under the frontal pole; the glow follows the gyri.
+        float pfc = cerebrum * smoothstep(.2, .34, dCentral) * mix(1.0 - below, 1.0, smoothstep(.42, .58, x));
+        col += uPfcColor * pfc * uPfc * (.05 + crest * .09 + fres * .1);
         col *= (1.0 - sulci * .45) * (1.0 - min(lines, 1.0) * .4);
         // Lighter tissue in the interior, crisper at the silhouette: a see-through brain.
         float body = mix(.55, 1.0, fres);
@@ -699,7 +744,14 @@ function buildBrain() {
       }`,
   });
   // Depth pre-pass: writes only depth, so each pixel shows just the nearest brain surface.
-  const depthMaterial = new THREE.MeshBasicMaterial({colorWrite: false, depthWrite: true, transparent: true});
+  // Same vertex program as the colour passes so depths match bit-for-bit; the slope-scaled
+  // offset keeps the LessEqual test stable at grazing silhouette angles (otherwise z-fighting).
+  const depthMaterial = new THREE.ShaderMaterial({
+    vertexShader: brainMaterial.vertexShader,
+    fragmentShader: 'void main() { gl_FragColor = vec4(0.0); }',
+    colorWrite: false, depthWrite: true, transparent: true,
+    polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+  });
   for (const geometry of [cerebrum, cerebellum, stem]) {
     const depth = new THREE.Mesh(geometry, depthMaterial);
     depth.renderOrder = 1;
@@ -716,6 +768,10 @@ function buildBrain() {
   brainGroup.scale.setScalar(mobile ? 7 : 9);
   brainGroup.rotation.set(.1, -.22, 0);
   brainGroup.visible = false;
+  const pfcLabel = addBrainLabel('PREFRONTAL CORTEX', V(.42, .5, .45));
+  brainGroup.add(pfcLabel);
+  pfcLabel.scale.multiplyScalar((mobile ? 1 : 8 / 12) / brainGroup.scale.x);
+  pfcLabel.userData.exterior = true;
   brainGroup.renderOrder = 2;
   scene.add(brainGroup);
 }
@@ -851,8 +907,11 @@ function addBrainLabel(title, position, far = 55) {
   sprite.center.set(0, .5);
   sprite.renderOrder = 5;
   sprite.userData.far = far;   // distance at which the label has fully faded out
+  sprite.userData.tour = TOUR.findIndex(stop => stop.labels.includes(title));
+  if (sprite.userData.tour < 0) console.warn(`Label "${title}" is not assigned to any tour stop`);
   scene.add(sprite);
   brainLabels.push(sprite);
+  return sprite;
 }
 
 function buildInterior() {
@@ -945,7 +1004,7 @@ function buildInterior() {
     r *= 1 + .16 * head * Math.max(0, -digit);   // digitations of the hippocampal head
     return [r * tubeCaps(u, 9, 14), mix(3, digit, head)];
   }), makeTissueMaterial(THREE.FrontSide, 1, 110)));
-  addBrainLabel('HIPPOCAMPUS', lanePoint(-112, -15, -1.5));
+  addBrainLabel('HIPOKAMP', lanePoint(-112, -15, -1.5));
 
   // Chapter 04 — thalamus: paired ovoids with a narrow anterior tubercle, a bulky
   // pulvinar overhanging at the back, flat medial walls facing each other across
@@ -995,6 +1054,7 @@ function buildInterior() {
     const mesh = new THREE.Mesh(amygdala, makeTissueMaterial(THREE.FrontSide, 1, 110));
     mesh.position.copy(lanePoint(-220.5, 8.4, -6.4));
     group.add(mesh);
+    addBrainLabel('AMYGDALA', lanePoint(-220.5, 11, -6.4));
   }
   addBrainLabel('CAUDATE NUCLEUS', lanePoint(-208, 12.5, 6.5));
 
@@ -1232,6 +1292,8 @@ function buildVagusJourney(group) {
 }
 
 const _labelDistance = V(0, 0, 0);
+const _labelWorld = V(0, 0, 0);
+const _viewDirection = V(0, 0, 0);
 function updateInterior() {
   for (const material of interiorMaterials) material.uniforms.uTime.value = internalTime;
   // Heartbeat ("lub-dub") and slow breathing.
@@ -1242,10 +1304,19 @@ function updateInterior() {
     const breath = 1 + Math.sin(internalTime * .9) * .03;
     for (const lung of lungMeshes) lung.scale.set(breath, 1 + (breath - 1) * 1.4, breath);
   }
+  const depth = smoothProgress * CONFIG.journeyDistance;
   for (const label of brainLabels) {
+    if (label.userData.exterior) {
+      // On the brain surface: hidden while the frontal lobe is turned away from the camera.
+      const behind = _labelDistance.subVectors(label.getWorldPosition(_labelWorld), brainGroup.position).dot(camera.getWorldDirection(_viewDirection));
+      label.material.opacity = .85 * brainReveal * (1 - smooth01(.5, 3, behind)) * tourGate(label.userData.tour, depth);
+      label.visible = label.material.opacity > .005;
+      continue;
+    }
     const d = _labelDistance.subVectors(label.position, camera.position).length();
     const ahead = label.position.z < camera.position.z ? 1 : 0;
-    label.material.opacity = (1 - smooth01(label.userData.far * .55, label.userData.far, d)) * smooth01(7, 14, d) * ahead * networkFade.value * .85;
+    label.material.opacity = (1 - smooth01(label.userData.far * .55, label.userData.far, d)) * smooth01(7, 14, d) * ahead * networkFade.value * .85
+      * tourGate(label.userData.tour, depth);
     label.visible = label.material.opacity > .005;
   }
 }
@@ -1406,19 +1477,23 @@ function animateCursor(dt) {
 function readScroll() {
   const distance=Math.max(1,journey.offsetHeight-window.innerHeight);
   const offset=window.scrollY + journey.getBoundingClientRect().top; // absolute top
-  targetProgress=clamp((window.scrollY-offset)/distance,0,1);
+  targetProgress=scrollToProgress(clamp((window.scrollY-offset)/distance,0,1));
 }
-function switchChapter(index) {
-  if(index===chapterIndex)return;
+function switchChapter(index, nav) {
+  if(index===chapterIndex && nav===navIndex)return;
   chapterIndex=index;
-  chapters.forEach((c,i)=>{
-    c.classList.toggle('is-active',i===index);
-    c.setAttribute('aria-hidden',String(i!==index));
-    c.querySelectorAll('a,button').forEach(el => { el.tabIndex = i === index ? 0 : -1; });
+  navIndex=nav;
+  const activeId=TOUR[index]?.id, navId=TOUR[nav]?.id;
+  chapters.forEach(c=>{
+    const active=c.dataset.chapter===activeId;
+    c.classList.toggle('is-active',active);
+    c.setAttribute('aria-hidden',String(!active));
+    c.querySelectorAll('a,button').forEach(el => { el.tabIndex = active ? 0 : -1; });
   });
-  jumpButtons.forEach((b,i)=>{
-    b.classList.toggle('is-current',i===index);
-    if(i===index)b.setAttribute('aria-current','step');
+  jumpButtons.forEach(b=>{
+    const current=b.dataset.jump===navId;
+    b.classList.toggle('is-current',current);
+    if(current)b.setAttribute('aria-current','step');
     else b.removeAttribute('aria-current');
   });
 }
@@ -1428,17 +1503,24 @@ function updateHud(progress) {
   progressLabel.textContent=`${String(number).padStart(2,'0')}%`;
   const depth=progress*CONFIG.journeyDistance;
   depthLabel.textContent=`DEPTH ${depth.toFixed(1).padStart(5,'0')}`;
-  let chapter=0;
-  for(const boundary of CHAPTER_DEPTHS) if(depth>=boundary) chapter++;
-  switchChapter(chapter);
+  // Same smoothed progress as the camera and the label gate, so text and 3D labels switch together.
+  let reached=0;
+  while(reached<TOUR.length-1 && depth>=TOUR[reached+1].start) reached++;
+  switchChapter(tourIndexAt(depth),reached);
 }
-function moveToChapter(index) {
+function moveToChapter(id) {
+  const stop=TOUR.find(s=>s.id===id);
+  if(!stop)return;
   const distance=Math.max(1,journey.offsetHeight-window.innerHeight);
-  const destinations=CHAPTER_JUMPS.map(depth=>depth/CONFIG.journeyDistance);
+  const destination=stop.jump/CONFIG.journeyDistance;
   const absoluteY=window.scrollY+journey.getBoundingClientRect().top;
-  window.scrollTo({top:absoluteY+distance*destinations[index],behavior:reducedMotion?'auto':'smooth'});
+  window.scrollTo({top:absoluteY+distance*progressToScroll(destination),behavior:reducedMotion?'auto':'smooth'});
 }
-jumpButtons.forEach(btn=>btn.addEventListener('click',()=>moveToChapter(Number(btn.dataset.jump))));
+jumpButtons.forEach(btn=>btn.addEventListener('click',()=>moveToChapter(btn.dataset.jump)));
+for(const stop of TOUR){
+  if(!chapters.some(c=>c.dataset.chapter===stop.id)||!jumpButtons.some(b=>b.dataset.jump===stop.id))
+    console.warn(`Tour stop "${stop.id}" has no matching chapter or navigation step`);
+}
 function setMotion(enabled){
   reducedMotion=!enabled;
   motionButton.setAttribute('aria-pressed',String(reducedMotion));
@@ -1532,6 +1614,7 @@ function animate(){
   brainGroup.visible=fade>.001;
   brainMaterial.uniforms.uReveal.value=intro;
   brainMaterial.uniforms.uFade.value=fade;
+  brainMaterial.uniforms.uPfc.value=tourGate(PFC_STOP,flown);
   brainMaterial.uniforms.uTime.value=internalTime;
   stage.classList.toggle('is-brain',brainReveal>.3);
   networkFade.value=smooth01(6.7,21.4,flown);
